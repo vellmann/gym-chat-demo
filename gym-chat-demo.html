@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gym Chatbot Demo</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 0; background: #f6f7fb; }
+    .page { max-width: 980px; margin: 0 auto; padding: 28px 18px 120px; }
+    h1 { margin: 0 0 8px; font-size: 26px; }
+    p { margin: 0 0 14px; color: #444; }
+
+    /* Chat launcher */
+    #launcher {
+      position: fixed; right: 18px; bottom: 18px;
+      border-radius: 999px; padding: 12px 14px;
+      background: #0b0b0c; color: #fff; font-weight: 800;
+      cursor: pointer; box-shadow: 0 12px 34px rgba(0,0,0,.18);
+      user-select: none;
+    }
+
+    /* Chat window */
+    #chat {
+      position: fixed; right: 18px; bottom: 78px;
+      width: 360px; max-width: calc(100vw - 36px);
+      border-radius: 18px; overflow: hidden;
+      background: #111114; color: #fff;
+      box-shadow: 0 18px 52px rgba(0,0,0,.22);
+      border: 1px solid rgba(255,255,255,.10);
+      display: none;
+    }
+    #head {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+    }
+    #head .title { font-weight: 900; letter-spacing: .2px; }
+    #head .sub { font-size: 12px; color: rgba(255,255,255,.75); font-weight: 600; }
+    #close { cursor: pointer; opacity: .9; }
+    #close:hover { opacity: 1; }
+
+    #log { height: 380px; overflow: auto; padding: 12px; background: rgba(255,255,255,.02); }
+    .msg { max-width: 92%; padding: 10px 12px; border-radius: 14px; margin: 8px 0; line-height: 1.28; font-size: 14px; }
+    .bot { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.10); }
+    .me { background: rgba(102,170,255,.22); border: 1px solid rgba(102,170,255,.38); margin-left: auto; }
+
+    #chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px; border-top: 1px solid rgba(255,255,255,.10); }
+    .chip {
+      font-size: 12px; padding: 8px 10px; border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14); background: transparent; color: #fff;
+      cursor: pointer;
+    }
+    .chip:hover { background: rgba(255,255,255,.06); }
+
+    #bar { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid rgba(255,255,255,.10); }
+    #inp {
+      flex: 1; border-radius: 12px; padding: 10px 12px;
+      border: 1px solid rgba(255,255,255,.14); background: rgba(0,0,0,.35); color: #fff;
+      outline: none;
+    }
+    #send {
+      border-radius: 12px; padding: 10px 12px; font-weight: 800;
+      border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.08); color: #fff;
+      cursor: pointer;
+    }
+    #send:hover { background: rgba(255,255,255,.12); }
+
+    .note { color: rgba(255,255,255,.75); font-size: 12px; padding: 0 12px 12px; }
+    .card {
+      background: #fff; border: 1px solid #e7e7ee; border-radius: 14px;
+      padding: 14px; margin-top: 12px;
+    }
+    code { background: #f0f1f7; padding: 2px 6px; border-radius: 6px; }
+    .leads { white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Gym-Chatbot Demo</h1>
+    <p>Diese Demo zeigt, wie ein Website-Chat für Gyms Standardfragen beantwortet und Probetrainings-Anfragen sammelt.</p>
+    <div class="card">
+      <b>Demo-Info:</b> Probetraining-Anfragen werden in dieser Demo <b>lokal im Browser</b> gespeichert (nur für Test).
+      <br/>Unten rechts: <b>Chat starten</b>.
+    </div>
+
+    <div class="card">
+      <b>Gespeicherte Demo-Leads (nur lokal):</b>
+      <div id="leads" class="leads" style="margin-top:10px;color:#222;"></div>
+      <button id="clear" style="margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid #ddd;background:#fff;cursor:pointer;">
+        Leads löschen
+      </button>
+    </div>
+  </div>
+
+  <div id="launcher">Chat starten</div>
+
+  <div id="chat">
+    <div id="head">
+      <div>
+        <div class="title" id="gymName">DEIN GYM</div>
+        <div class="sub">Assistenz • Probetraining & Fragen</div>
+      </div>
+      <div id="close">✕</div>
+    </div>
+
+    <div id="log"></div>
+
+    <div id="chips">
+      <button class="chip" data-msg="Probetraining">Probetraining</button>
+      <button class="chip" data-msg="Preise">Preise</button>
+      <button class="chip" data-msg="Öffnungszeiten">Öffnungszeiten</button>
+      <button class="chip" data-msg="Standort">Standort</button>
+      <button class="chip" data-msg="Kontakt">Kontakt</button>
+    </div>
+
+    <div id="bar">
+      <input id="inp" placeholder="Schreib hier..." />
+      <button id="send">Senden</button>
+    </div>
+
+    <div class="note">Hinweis: Der Chat bestätigt keine Termine – das Team meldet sich bei dir.</div>
+  </div>
+
+<script>
+  // ====== GYM KONFIG (nur diese Werte pro Kunde anpassen) ======
+  const GYM = {
+    name: "Demo GYM",
+    city: "Ostschweiz",
+    address: "Musterstrasse 1, 9000 St. Gallen",
+    hours: "Mo–Fr 06:00–22:00 • Sa/So 08:00–20:00",
+    contact: {
+      email: "info@demo-gym.ch",
+      phone: "+41 79 000 00 00",
+      instagram: "@demogym"
+    },
+    pricingHint:
+      "Wir haben verschiedene Abos je nach Laufzeit. Sag kurz, was du suchst – unser Team meldet sich mit dem passenden Angebot."
+  };
+
+  // ====== UI ======
+  const launcher = document.getElementById("launcher");
+  const chat = document.getElementById("chat");
+  const closeBtn = document.getElementById("close");
+  const log = document.getElementById("log");
+  const inp = document.getElementById("inp");
+  const sendBtn = document.getElementById("send");
+  const leadsBox = document.getElementById("leads");
+  const clearBtn = document.getElementById("clear");
+
+  document.getElementById("gymName").textContent = GYM.name;
+
+  function add(role, text) {
+    const div = document.createElement("div");
+    div.className = `msg ${role}`;
+    div.textContent = text;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+  const bot = (t) => add("bot", t);
+  const me  = (t) => add("me", t);
+
+  function openChat() { chat.style.display = "block"; launcher.style.display = "none"; inp.focus(); }
+  function closeChat() { chat.style.display = "none"; launcher.style.display = "block"; }
+
+  launcher.addEventListener("click", openChat);
+  closeBtn.addEventListener("click", closeChat);
+
+  document.querySelectorAll(".chip").forEach(btn => {
+    btn.addEventListener("click", () => send(btn.dataset.msg));
+  });
+
+  // ====== Lead storage (Demo) ======
+  const LS_KEY = "gym_demo_leads_v1";
+
+  function getLeads() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); }
+    catch { return []; }
+  }
+  function saveLead(lead) {
+    const leads = getLeads();
+    leads.unshift(lead);
+    localStorage.setItem(LS_KEY, JSON.stringify(leads));
+    renderLeads();
+  }
+  function renderLeads() {
+    const leads = getLeads();
+    if (!leads.length) {
+      leadsBox.textContent = "Noch keine Leads gespeichert.";
+      return;
+    }
+    leadsBox.textContent = leads.map(l =>
+`[${new Date(l.createdAt).toLocaleString()}]
+Gym: ${l.gym}
+Thema: ${l.topic}
+Name: ${l.name}
+Kontakt: ${l.contact}
+Wunschzeit: ${l.preferredTime}
+Nachricht: ${l.message || "-"}
+---`).join("\n");
+  }
+  clearBtn.addEventListener("click", () => { localStorage.removeItem(LS_KEY); renderLeads(); });
+  renderLeads();
+
+  // ====== Chat logic (simple state machine) ======
+  let mode = "normal";
+  let lead = { topic: "Probetraining", name: "", contact: "", preferredTime: "", message: "" };
+
+  function intro() {
+    bot(`👋 Hi! Ich bin der Assistent von ${GYM.name} (${GYM.city}).`);
+    bot("Ich helfe dir bei Probetrainings, Preisen, Öffnungszeiten, Standort und Kontakt.");
+    bot("Wobei kann ich helfen?");
+  }
+
+  function handleNormal(msg) {
+    const m = msg.toLowerCase();
+
+    if (m.includes("probetraining") || m.includes("probe") || m.includes("test")) {
+      lead = { topic: "Probetraining", name: "", contact: "", preferredTime: "", message: "" };
+      mode = "lead_name";
+      bot("Super 💪 Wie heisst du? (Vor- und Nachname)");
+      return;
+    }
+
+    if (m.includes("öffnungs") || m.includes("zeiten")) {
+      bot(`⏰ Öffnungszeiten: ${GYM.hours}`);
+      return;
+    }
+
+    if (m.includes("standort") || m.includes("adresse") || m.includes("wo")) {
+      bot(`📍 Standort: ${GYM.address}`);
+      bot("Möchtest du ein Probetraining anfragen?");
+      return;
+    }
+
+    if (m.includes("preis") || m.includes("abo") || m.includes("kosten")) {
+      bot(`💰 ${GYM.pricingHint}`);
+      bot("Wenn du willst, kann ich eine Probetraining-/Kontaktanfrage aufnehmen.");
+      return;
+    }
+
+    if (m.includes("kontakt") || m.includes("telefon") || m.includes("email") || m.includes("instagram")) {
+      bot(`📞 Kontakt: ${GYM.contact.phone} • ✉️ ${GYM.contact.email} • IG: ${GYM.contact.instagram}`);
+      return;
+    }
+
+    // Any other message -> offer to forward as general inquiry
+    if (m.trim().length >= 6) {
+      lead = { topic: "Allgemeine Anfrage", name: "", contact: "", preferredTime: "", message: msg };
+      mode = "lead_name";
+      bot("Alles klar 👍 Ich leite das ans Team weiter. Wie heisst du? (Vor- und Nachname)");
+      return;
+    }
+
+    bot("Ich kann helfen bei: Probetraining, Preise, Öffnungszeiten, Standort, Kontakt.");
+  }
+
+  function handleLead(msg) {
+    if (mode === "lead_name") {
+      lead.name = msg.trim();
+      mode = "lead_contact";
+      bot("Danke! 🙌 Wie können wir dich erreichen? (E-Mail oder Telefon)");
+      return;
+    }
+    if (mode === "lead_contact") {
+      lead.contact = msg.trim();
+      mode = "lead_time";
+      bot("Wann würdest du ungefähr kommen wollen? (z.B. morgen Abend / Samstag Vormittag)");
+      return;
+    }
+    if (mode === "lead_time") {
+      lead.preferredTime = msg.trim();
+      // store lead (demo)
+      saveLead({
+        createdAt: new Date().toISOString(),
+        gym: GYM.name,
+        topic: lead.topic,
+        name: lead.name,
+        contact: lead.contact,
+        preferredTime: lead.preferredTime,
+        message: lead.message || ""
+      });
+
+      mode = "normal";
+      bot("Perfekt ✅ Ich habe deine Anfrage aufgenommen und ans Team weitergeleitet (Demo: lokal gespeichert).");
+      bot("Hinweis: Der Termin ist noch nicht bestätigt – das Team meldet sich bei dir.");
+      return;
+    }
+  }
+
+  function send(forcedMsg) {
+    const msg = (forcedMsg ?? inp.value).trim();
+    if (!msg) return;
+    inp.value = "";
+    me(msg);
+    if (mode === "normal") handleNormal(msg);
+    else handleLead(msg);
+  }
+
+  sendBtn.addEventListener("click", () => send());
+  inp.addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
+
+  intro();
+</script>
+</body>
+</html>
